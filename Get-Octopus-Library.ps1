@@ -42,6 +42,10 @@ Function Get-Octopus-Library{
         if(-Not (test-path $Destination\Library\VariableSets)){   
             New-Item -Path $Destination\Library -Name VariableSets -ItemType directory
         }
+
+        # Get the necessary informations
+        $environments = Get-Octopus-Environements -OctopusURI $OctopusURI -apikey $apikey 
+        $machines = Get-Octopus-Machines -OctopusURI $OctopusURI -apikey $apikey 
     }
 
     Process{          
@@ -68,12 +72,12 @@ Function Get-Octopus-Library{
                     
                     add-Member -InputObject $Var –MemberType NoteProperty –Name Name –Value $Variable.Name 
                     add-Member -InputObject $Var –MemberType NoteProperty –Name Value –Value $Variable.Value
-                    
+                     
                     if($Variable.Scope.Environment.Length -ge 1){ 
-                        $Var | add-Member –MemberType NoteProperty –Name Environment –Value $Variable.Scope.Environment
+                        $Var | add-Member –MemberType NoteProperty –Name Environment –Value $environments[$Variable.Scope.Environment]                        
                     }
                     if($Variable.Scope.Machine.Length -ge 1){ 
-                        $Var | add-Member –MemberType NoteProperty –Name Machine –Value $Variable.Scope.Machine
+                        $Var | add-Member –MemberType NoteProperty –Name Machine –Value  $machines[$Variable.Scope.Machine]
                     }
                     if($Variable.Scope.Role.Length -ge 1){
                         $Var | add-Member –MemberType NoteProperty –Name Roles –Value $Variable.Scope.Role
