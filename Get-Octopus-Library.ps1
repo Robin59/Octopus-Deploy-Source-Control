@@ -39,6 +39,9 @@ Function Get-Octopus-Library{
         if(-Not (test-path $Destination\Library\ScriptModule)){   
             New-Item -Path $Destination\Library -Name ScriptModule -ItemType directory
         }
+        if(-Not (test-path $Destination\Library\VariableSets)){   
+            New-Item -Path $Destination\Library -Name VariableSets -ItemType directory
+        }
     }
 
     Process{          
@@ -52,7 +55,34 @@ Function Get-Octopus-Library{
                 $URI = $OctopusURI+$Project.Links.Variables      
                 $Var = (Invoke-WebRequest $URI -Method Get -Headers $header).content | ConvertFrom-Json 
                 $Var.Variables.Value > ("$Destination\Library\ScriptModule\"+$Project.Name+".ps1")
-            }    
+
+            }elseif($Project.ContentType -eq "Variables"){
+                
+                $VariablesOutput = New-Object System.Collections.ArrayList
+                $URI = $OctopusURI+$Project.Links.Variables      
+                $Variables =  (Invoke-WebRequest $URI -Method Get -Headers $header).content | ConvertFrom-Json                
+                                
+                Foreach ($Variable in $Variables.variables){   
+                
+                    $Var = New-Object psobject
+                    
+                    add-Member -InputObject $Var –MemberType NoteProperty –Name Name –Value $Variable.Name 
+                    add-Member -InputObject $Var –MemberType NoteProperty –Name Value –Value $Variable.Value
+                    
+                    if($Variable.Scope.Environment.Length -ge 1){ 
+                        $Var | add-Member –MemberType NoteProperty –Name Environment –Value $Variable.Scope.Environment
+                    }
+                    if($Variable.Scope.Machine.Length -ge 1){ 
+                        $Var | add-Member –MemberType NoteProperty –Name Machine –Value $Variable.Scope.Machine
+                    }
+                    if($Variable.Scope.Role.Length -ge 1){
+                        $Var | add-Member –MemberType NoteProperty –Name Roles –Value $Variable.Scope.Role
+                    }                    
+                                                        
+                    $VariablesOutput.Add($Var) | Out-Null
+                }
+                 $VariablesOutput | ConvertTo-Json > ("$Destination\Library\VariableSets\"+$Project.Name+".json")
+            }
         }
 
     }
