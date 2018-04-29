@@ -33,7 +33,10 @@ Function Get-Octopus-Projects{
         #Create structure
         if(-Not (test-path $Destination\Projects)){   
             New-Item -Path $Destination -Name Projects -ItemType directory
-        }               
+        }       
+        # Get the necessary informations
+        #$environments = Get-Octopus-Environements -OctopusURI $OctopusURI -apikey $apikey 
+        #$machines = Get-Octopus-Machines -OctopusURI $OctopusURI -apikey $apikey 
     }
 
     Process{          
@@ -48,17 +51,36 @@ Function Get-Octopus-Projects{
                 New-Item -Path $Destination\Projects -Name $projectGroup.Name -ItemType directory
             }
             $uri = [string]::Concat($OctopusURI,"/api/projectgroups/",  $projectGroup.ID, "/projects")
-            $projects = (Invoke-WebRequest $uri -Method Get -Headers $header).content | ConvertFrom-Json
-           
+            $projects = (Invoke-WebRequest $uri -Method Get -Headers $header).content | ConvertFrom-Json          
+            
             foreach($project in  $projects.Items){
                 $projectPath = [string]::Concat($projectGroupPath, "\", $project.Name)
                 if(-Not (test-path $projectPath)){  
                     New-Item -Path $projectGroupPath -Name $project.Name -ItemType directory 
                 }
-                # Write-Output $project
-            }
-        }
+                $Uri = [string]::Concat($OctopusURI, $project.Links.DeploymentProcess)
+               
+                $deploymentprocesses = (Invoke-WebRequest $Uri -Method Get -Headers $header).content | ConvertFrom-Json  
+                foreach ($step in $deploymentprocesses.Steps){                    
+                                        
+                    $stepPath = [string]::Concat($projectPath, "\", $step.Name)
+                    if(-Not (test-path $stepPath)){  
+                        New-Item -Path $projectPath -Name $step.Name -ItemType directory 
+                    }
 
+                    foreach ($Action in $step.Actions){                        
+                        if($Action.ActionType -eq "Octopus.Script"){
+                            $Action.Properties.PSObject.Properties | foreach-object {                            
+                                if ($_.Name -eq "Octopus.Action.Script.ScriptBody"){                               
+                                    $_.value  > ([string]::Concat($stepPath, "\", $Action.name, ".ps1"))                           
+                                }
+                            }
+                        }
+                    }
+
+                }#End Foreach Step
+            }
+        }        
     }
 
 }
