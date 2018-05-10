@@ -68,3 +68,30 @@ Function Get-Octopus-Machines{
         $output        
     }
 }
+
+Function Get-Octopus-lifecycles{
+<#
+#>
+    param
+    (               
+        [Parameter(Mandatory=$True)][String]$OctopusURI,
+        [Parameter(Mandatory=$True)][String]$apikey
+    )
+
+    Begin{        
+        Add-Type -Path "C:\Program Files\Octopus Deploy\Octopus\Octopus.Client.dll"
+    }
+
+    Process{          
+        $header = @{ "X-Octopus-ApiKey" = $apikey } 
+        $output = @{}
+
+        $allLifecycles = ((Invoke-WebRequest $OctopusURI/api/lifecycles/all -Method Get -Headers $header).content | ConvertFrom-Json )        
+
+         Foreach ($lifecycle in $allLifecycles) {
+            $output.Add($lifecycle.Id, $lifecycle)
+         }
+      
+        $output        
+    }
+}
